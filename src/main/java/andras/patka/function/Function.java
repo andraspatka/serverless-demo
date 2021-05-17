@@ -17,6 +17,7 @@ import java.util.Optional;
  */
 public class Function {
 
+    // TODO: Read storage connection String from property file.
     public static final String storageConnectionString =
         "";
 
