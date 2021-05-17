@@ -9,9 +9,7 @@ import com.microsoft.azure.functions.annotation.AuthorizationLevel;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 
-import com.microsoft.azure.storage.*;
-import com.microsoft.azure.storage.table.*;
-
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -22,57 +20,76 @@ public class Function {
     public static final String storageConnectionString =
         "";
 
+
+    ItemService itemService;
+
+    public Function() {
+        itemService = new ItemService(storageConnectionString);
+    }
+
+    public Function(ItemService itemService) {
+        this.itemService = itemService;
+    }
+
     /**
-     * This function listens at endpoint "/api/HttpExample". Two ways to invoke it using "curl" command in bash:
-     * 1. curl -d "HTTP Body" {your host}/api/HttpExample
-     * 2. curl "{your host}/api/HttpExample?name=HTTP%20Query"
+     * curl "{your host}/api/HttpExample?name=HTTP%20Query&category=fruits"
      */
-    @FunctionName("HttpExample")
-    public HttpResponseMessage run(
+    @FunctionName("items")
+    public HttpResponseMessage addItem(
             @HttpTrigger(
                 name = "req",
-                methods = {HttpMethod.GET, HttpMethod.POST},
+                methods = {HttpMethod.POST},
                 authLevel = AuthorizationLevel.ANONYMOUS)
                 HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
-        context.getLogger().info("Java HTTP trigger processed a request.");
 
         // Parse query parameter
-        final String query = request.getQueryParameters().get("name");
-        final String name = request.getBody().orElse(query);
+        final String queryName = request.getQueryParameters().get("name");
+        final String queryCategory = request.getQueryParameters().get("category");
+        Categories category;
 
-        if (name == null) {
-            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a name on the query string or in the request body").build();
-        } else {
-            saveToTable(name);
-            return request.createResponseBuilder(HttpStatus.OK).body("Hello, " + name.toUpperCase()).build();
+        context.getLogger().info("Add item with parameters: name: " + queryName + " category: " + queryCategory);
+
+        if (queryName == null) {
+            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a name on the query string").build();
         }
-    }
-
-    private void saveToTable(String name) {
+        if (queryCategory == null) {
+            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a category on the query string").build();
+        }
         try {
-            // Retrieve storage account from connection-string.
-            CloudStorageAccount storageAccount =
-                CloudStorageAccount.parse(storageConnectionString);
-
-            // Create the table client.
-            CloudTableClient tableClient = storageAccount.createCloudTableClient();
-
-            // Create a cloud table object for the table.
-            CloudTable cloudTable = tableClient.getTableReference("Strings");
-
-            // Create a new customer entity.
-            StringEntity stringEntity = new StringEntity(name);
-
-            // Create an operation to add the new string to the strings table.
-            TableOperation insertString = TableOperation.insertOrReplace(stringEntity);
-
-            // Submit the operation to the table service.
-            cloudTable.execute(insertString);
+            category = Categories.valueFromString(queryCategory.toUpperCase());
+        } catch(CategoryNotFoundException e) {
+            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body(e.getMessage()).build();
         }
-        catch (Exception e) {
-            // Output the stack trace.
-            e.printStackTrace();
-        }
+        itemService.saveToTable(queryName.toUpperCase(), category);
+        return request.createResponseBuilder(HttpStatus.OK).body("Saved to table: " + queryName.toUpperCase() + " category: " + queryCategory.toUpperCase()).build();
     }
+
+    @FunctionName("items")
+    public HttpResponseMessage getItems(
+            @HttpTrigger(
+                name = "req",
+                methods = {HttpMethod.GET},
+                authLevel = AuthorizationLevel.ANONYMOUS)
+                HttpRequestMessage<Optional<String>> request,
+            final ExecutionContext context) {
+        // Parse query parameter
+        final String queryCategory = request.getQueryParameters().get("category");
+        Categories category;
+
+        context.getLogger().info("Get items with parameters: category: " + queryCategory);
+
+        if (queryCategory == null) {
+            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body("Please pass a category on the query string").build();
+        }
+        try {
+            category = Categories.valueFromString(queryCategory.toUpperCase());
+        } catch(CategoryNotFoundException e) {
+            return request.createResponseBuilder(HttpStatus.BAD_REQUEST).body(e.getMessage()).build();
+        }
+
+        List<String> items = itemService.getItemsOfCategory(category);
+        return request.createResponseBuilder(HttpStatus.OK).body("Items of category: " + category.toString() + ": " + items).build();
+    }
+    
 }
