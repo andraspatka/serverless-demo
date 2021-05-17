@@ -12,6 +12,7 @@ import java.util.stream.StreamSupport;
 public class ItemService {
 
     private String storageConnectionString;
+    private static final String TABLE_NAME = "Items";
 
     public ItemService(String storageConnectionString) {
         this.storageConnectionString = storageConnectionString;
@@ -26,10 +27,8 @@ public class ItemService {
             // Create the table client.
             CloudTableClient tableClient = storageAccount.createCloudTableClient();
 
-            String tableName = "Items";
-
             // Create a cloud table object for the table.
-            CloudTable cloudTable = tableClient.getTableReference(tableName);
+            CloudTable cloudTable = tableClient.getTableReference(TABLE_NAME);
             cloudTable.createIfNotExists();
 
             // Create a new customer entity.
@@ -59,16 +58,18 @@ public class ItemService {
             CloudTableClient tableClient = storageAccount.createCloudTableClient();
         
             // Create a cloud table object for the table.
-            CloudTable cloudTable = tableClient.getTableReference("Items");
+            CloudTable cloudTable = tableClient.getTableReference(TABLE_NAME);
         
             // Create a filter condition where the partition key is a category.
             String partitionFilter = TableQuery.generateFilterCondition(PARTITION_KEY, QueryComparisons.EQUAL, category.toString());
         
-            // Specify a partition query, using "Smith" as the partition key filter.
+            // Specify a partition query, using category as the partition key filter.
             TableQuery<ItemEntity> partitionQuery = TableQuery.from(ItemEntity.class).where(partitionFilter);
 
-            return StreamSupport.stream(cloudTable.execute(partitionQuery).spliterator(), false)
-                .map(ItemEntity::getName)
+            Iterable<ItemEntity> iterable = cloudTable.execute(partitionQuery);
+
+            return StreamSupport.stream(iterable.spliterator(), false)
+                .map(ItemEntity::getRowKey)
                 .collect(Collectors.toList());
         }
         catch (Exception e) {

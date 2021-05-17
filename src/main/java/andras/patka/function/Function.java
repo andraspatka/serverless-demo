@@ -65,7 +65,7 @@ public class Function {
         return request.createResponseBuilder(HttpStatus.OK).body("Saved to table: " + queryName.toUpperCase() + " category: " + queryCategory.toUpperCase()).build();
     }
 
-    @FunctionName("items")
+    @FunctionName("getItems")
     public HttpResponseMessage getItems(
             @HttpTrigger(
                 name = "req",

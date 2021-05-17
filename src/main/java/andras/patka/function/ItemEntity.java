@@ -11,6 +11,8 @@ public class ItemEntity extends TableServiceEntity {
         this.rowKey = name;
     }
 
+    public ItemEntity() {}
+
     public String getName() {
         return this.name;
     }
