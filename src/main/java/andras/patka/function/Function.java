@@ -32,7 +32,8 @@ public class Function {
     }
 
     /**
-     * curl "{your host}/api/HttpExample?name=HTTP%20Query&category=fruits"
+     * POST to https://software-engineering-sia-2021.azurewebsites.net/api/items?name=name&category=category
+     * Category can be: fruits, dogs, cars (case insensitive)
      */
     @FunctionName("items")
     public HttpResponseMessage addItem(
@@ -64,7 +65,10 @@ public class Function {
         itemService.saveToTable(queryName.toUpperCase(), category);
         return request.createResponseBuilder(HttpStatus.OK).body("Saved to table: " + queryName.toUpperCase() + " category: " + queryCategory.toUpperCase()).build();
     }
-
+    /**
+     * GET to https://software-engineering-sia-2021.azurewebsites.net/api/getItems?category=category
+     * Category can be: fruits, dogs, cars (case insensitive)
+     */
     @FunctionName("getItems")
     public HttpResponseMessage getItems(
             @HttpTrigger(
