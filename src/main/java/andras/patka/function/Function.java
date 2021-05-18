@@ -17,14 +17,11 @@ import java.util.Optional;
  */
 public class Function {
 
-    // TODO: Read storage connection String from property file.
-    public static final String storageConnectionString =
-        "";
-
-
+    public static String storageConnectionString;
     ItemService itemService;
 
     public Function() {
+        storageConnectionString = System.getenv("STORAGE_CONNECTION_STRING");
         itemService = new ItemService(storageConnectionString);
     }
 
